@@ -1,14 +1,10 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
-import { email, z } from 'zod'
-import dotenv from 'dotenv';
 import cors from 'cors'
 import { authMiddleWare } from './middleware/auth';
 import { SignUpSchema , SignInSchema } from '@repo/common/types'
-
-
-
-dotenv.config();
+import { prismaClient } from '@repo/db/db'
+import bcrypt from 'bcrypt'
 
 
 const app = express();
@@ -20,16 +16,30 @@ app.use(cors({
 }))
 
 
-app.post("/signUp" , (req : express.Request,res : express.Response) => {
+
+app.post("/signUp" , async (req : express.Request,res : express.Response) => {
 
     let body = req.body;
-    
 
     let {success , data , error} = SignUpSchema.safeParse(body);
 
     if (success){
         type signUpRequestDataType = typeof data;
         let requestData : signUpRequestDataType = data;
+
+
+        if (requestData != undefined){
+            const hashedPassword = await bcrypt.hash(requestData?.password , 5)
+
+            const adduser = await prismaClient.user.create({
+                data: {
+                    username : requestData.username,
+                    password : hashedPassword,
+                    name : requestData.name
+                }
+
+            })
+        }
 
         res.json({
             "message" : "Successfully Signed Up"
