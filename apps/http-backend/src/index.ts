@@ -2,9 +2,10 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import cors from 'cors'
 import { authMiddleWare } from './middleware/auth';
-import { SignUpSchema , SignInSchema } from '@repo/common/types'
+import { SignUpSchema , SignInSchema, CreateRoomSchema } from '@repo/common/types'
 import { prismaClient } from '@repo/db/db'
 import bcrypt from 'bcrypt'
+import { JWT_SECRET } from '@repo/backend-common/config';
 
 
 const app = express();
@@ -12,7 +13,8 @@ const app = express();
 app.use(express.json());
 
 app.use(cors({
-    origin : "*"
+    origin : "*",
+    allowedHeaders : ["Authorization"]
 }))
 
 
@@ -52,27 +54,44 @@ app.post("/signUp" , async (req : express.Request,res : express.Response) => {
 })
 
 
-app.post("/signIn" , (req : express.Request,res : express.Response) => {
+app.post("/signIn" , async (req : express.Request,res : express.Response) => {
 
     let body = req.body;
     
 
-    let {success , data , error} = SignInSchema.safeParse(body)
+    let {success , data , error} = SignInSchema.safeParse(body);
+
 
     if (success){
 
         type signInRequestDataType = typeof data;
         let requestData : signInRequestDataType = data;
 
-        let jwtSecret = process.env.JWT_SECRET;
+        let jwtSecret = JWT_SECRET;
+
         
-        if(jwtSecret != undefined){
+        if(jwtSecret != undefined && requestData != undefined){
 
-            let jwtToken = jwt.sign({"username" : data?.username} ,jwtSecret, { expiresIn: '10m'});
+            const resp = await prismaClient.user.findFirst({
+                where: {
+                "username" : requestData.username
+                }
+            })
 
+            if (resp == null){
+
+                res.status(404).json({
+                    "error" :  "user not found"
+                })
+                return;
+            }
+
+            let jwtToken = jwt.sign({"userId" : resp?.id} , jwtSecret);
             res.json({
-                "token" : jwtToken
-            });
+                "success" : "user signed up",
+                "tokem" : jwtToken
+            })
+
         }
         else{
             res.status(400).json({
@@ -82,17 +101,108 @@ app.post("/signIn" , (req : express.Request,res : express.Response) => {
 
     }
     else{
-        res.json(error);
+        console.log(error)
+        res.status(404).json({
+            "error" : "Bad Request"
+        });
     }
 })
 
 
-app.post("/room" ,authMiddleWare , (req : express.Request,res : express.Response) => {
+app.post("/room" ,authMiddleWare , async (req : express.Request,res : express.Response) => {
+
+
+    const {success , data, error} = CreateRoomSchema.safeParse(req.body);
+
+    if (data == undefined){
+        res.status(400).json({
+            "error" : "user not found"
+        })
+        return;
+    }
 
     //@ts-ignore
-    let username = req.username;
+    let userId = req.userId
 
-    res.send("room connected for userr")
+
+    if (userId != undefined) {
+
+        try{
+
+        let roomData = await prismaClient.room.create({
+                data : {
+                    slug : data?.name,
+                    adminId : userId
+                }
+        })
+
+
+        res.json({
+            "success": "room created succesfully",
+            "roomId" : roomData.id
+        })
+
+    }
+
+    catch(e){
+
+        console.log(`error ${e}`);
+
+        res.status(409).json({
+            "error" : "room already exist"
+        });
+
+        }
+    }
+    else{
+
+        res.status(400).json({
+            "error" : "user not found"
+        })
+
+    }
+    
+});
+
+app.get("/chats/:roomId" , authMiddleWare , async (req,res) => {
+
+    const roomId = Number(req.params.roomId);
+
+    const chats =  await prismaClient.chat.findMany({
+        where : {
+            roomId : roomId
+        },
+        orderBy : {
+            "id" : 'desc'
+        },
+        take : 50
+    })
+
+    res.json(chats);
+
 })
+
+
+
+app.get("/room/:slug" , authMiddleWare , async (req,res) => {
+
+    const slug = req.params.slug;
+    
+    const roomInfo =  await prismaClient.room.findFirst({
+        where : {
+            slug : slug
+        }
+    })
+
+    res.json({
+        roomId : roomInfo?.id
+    });
+
+})
+
+
+
+
+
 
 app.listen(3001);

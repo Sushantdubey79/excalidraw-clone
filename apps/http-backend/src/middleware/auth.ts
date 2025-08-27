@@ -6,19 +6,18 @@ import { JWT_SECRET } from "@repo/backend-common/config"
 
 interface decodedToken{
 
-    username : string
+    userId : Number
 
 }
 
 const authMiddleWare = (req : Request, res : Response, next : NextFunction) => {
 
-        let requestBody = req.body;
+        let requestHeaders = req.headers;
 
-        let token = requestBody.token ?? "";
+        let token = requestHeaders.authorization ?? "";
 
         let jwtSecret = process.env.JWT_SECRET;
 
-        
 
         if (jwtSecret != undefined) {
 
@@ -26,10 +25,11 @@ const authMiddleWare = (req : Request, res : Response, next : NextFunction) => {
 
                 let valid = jwt.verify(token , JWT_SECRET) as decodedToken;
 
-                let username = valid.username;
+
+                let userId = valid.userId;
 
                 //@ts-ignore
-                req.username = username;
+                req.userId = userId;
 
                 next();
 
@@ -37,14 +37,16 @@ const authMiddleWare = (req : Request, res : Response, next : NextFunction) => {
             catch(e){
                 console.log(e);
                 res.status(401).json({
-                    "error" : "unauthorized"
+                    "error" : "Not Authenticated"
                 })
             }
-
-            
         }
-
-}
+        else{
+            res.status(400).json({
+                    "error" : "Bad Request"
+                })
+        }
+    }
 
 
 export {
