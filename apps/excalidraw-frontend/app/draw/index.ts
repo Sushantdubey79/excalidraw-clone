@@ -70,8 +70,8 @@ function showAllShapes(ctx : CanvasRenderingContext2D, canvas : HTMLCanvasElemen
         if (value.type == "rectangle"){
             ctx.strokeStyle ="rgba(255,255,255)"
             ctx.strokeRect(value.x,value.y,value.width,value.height);
+            }
         }
-    }
     )
     
 }
