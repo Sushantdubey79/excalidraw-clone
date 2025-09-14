@@ -26,7 +26,6 @@ ws.on("connection", (socket,request) => {
 
     const token = queryParam.get("token") ?? "";
 
-    console.log("token --> " + token);
 
     let userId = authMiddleWare(token);
 

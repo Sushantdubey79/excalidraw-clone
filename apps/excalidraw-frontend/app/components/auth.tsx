@@ -20,7 +20,6 @@ export default function Auth({isSignIn} : AuthProp){
             <input type="text" placeholder="Enter Password" className="p-2 m-2 border-2 border-gray-700 text-white rounded-md" />
             {isSignIn === false && <input type="text" placeholder="Enter Name" className="p-2 m-2 border-2 border-gray-700 text-white rounded-md" />}
             <Button className="p-2 m-2 bg-blue-500 cursor-pointer text-white rounded-md" callback={buttonOnClick}> {isSignIn ? 'Sign In' : 'Sign Up'}</Button>
-
         </div>
 
 

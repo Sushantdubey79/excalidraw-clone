@@ -175,7 +175,7 @@ app.get("/chats/:roomId" , authMiddleWare , async (req,res) => {
         where : {
             roomId : roomId
         },
-        take : 50
+        take : 1000
     })
 
     res.json(chats);
